@@ -79,6 +79,13 @@ public class TriExterne {
      *                               lecture
      */
     public void trier() throws FileNotFoundException, IOException {
+        int total = creerFragmentsInitiaux(); // crée fragment_0_0.csv, fragment_0_1.csv, ...
+        int nFragments = (int) Math.ceil(total / (double) M);
+
+        System.out.println("[Tri externe] Niveau 0 généré.");
+        System.out.println(" - N-uplets lus   : " + total);
+        System.out.println(" - Taille M       : " + M);
+        System.out.println(" - #fragments     : " + nFragments);
     }
 
     /**
@@ -102,7 +109,7 @@ public class TriExterne {
      * @throws IOException si une erreur d'écriture dans le fichier se produit
      */
     private static void ecrireLigneCSV(FileWriter fw, String[] valeurs) throws IOException {
-        String mot = "";
+        String mot = ""; // TODO: StringBuilder serait plus efficace
         for (int i = 0; i < valeurs.length; i++) {
             mot += valeurs[i];
             if (i != valeurs.length - 1) {
@@ -113,30 +120,170 @@ public class TriExterne {
         fw.append(mot);
     }
 
-    // écrit dans un fichier CSV le contenu du cache de l'indice 0 à taille - 1
-    // (avec taille <= M)
+    /**
+     * sauvegarde le contenu du cache[0,taille-1] dans un fichier CSV
+     * (avec taille <= M)
+     * 
+     * Etapes:
+     * -
+     * 
+     * @param path   le chemin du fichier CSV
+     * @param entete la liste des noms de colonnes du fichier CSV
+     * @param taille le nombre d'éléments à sauvegarder (<= M)
+     * @throws IOException              si une erreur d'écriture dans le fichier se
+     *                                  produit
+     * @throws IllegalArgumentException si taille n'est pas dans l'intervalle [0,M]
+     */
     private void sauvegardeCache(String path, String[] entete, int taille) throws IOException {
-    }
 
-    // lit le fichier CSV inital et le diviser en fichiers triée de taille M à
-    // l'exception du dernier
-    // retourne le nombre de nuplets lus
-    private int creerFragmentsInitiaux() throws IOException {
-        return 0;
+        if (taille < 0 || taille > M) {
+            throw new IllegalArgumentException("taille doit etre dans l'intervalle [0, M]");
+        }
+        try (FileWriter fw = new FileWriter(path)) {
+            // Ecrire Entete
+            ecrireLigneCSV(fw, entete);
+
+            // Ecrire premeir n(taille) ligne
+            for (int i = 0; i < taille; i++) {
+                if (cache[i] != null) {
+                    ecrireLigneCSV(fw, cache[i]);
+                }
+            }
+        }
     }
 
     /**
-     * Fusionne les fichiers fragment_niveau_numero.csv
+     * Crée les fragments initiaux triés à partir du fichier CSV initial.
+     * Chaque fragment est un fichier CSV contenant au plus M lignes triées.
      * 
-     * @param niveau le niveau de fusion
-     * @param nombre le nombre de fichiers à fusionner
-     * @return le nombre de fichiers créés
-     * @throws FileNotFoundException si le fichier n'existe pas
-     * @throws IOException           si le fichier n'existe pas ou si une erreur de
-     *                               lecture
+     * @return le nombre TOTAL de n-uplets lus (hors entête)
+     * @throws IOException si une erreur de lecture ou d'écriture se produit
+     */
+    private int creerFragmentsInitiaux() throws IOException {
+        String ligne;
+        int totalTuples = 0; // demandé par l'énoncé Q9
+        int fill = 0; // nb d'éléments actuellement dans le cache
+        int numFragment = 0; // fragment_0_{numFragment}.csv
+
+        try {
+            while ((ligne = this.fichierInit.readLine()) != null) {
+                cache[fill] = nupletDepuis(ligne);
+                fill++;
+                totalTuples++;
+
+                if (fill == M) {
+                    trierCache(fill);
+                    String fragName = nomDeFragment(0, numFragment++);
+                    sauvegardeCache(fragName, entete, fill);
+                    fill = 0; // on "vide" le cache logiquement
+                }
+            }
+
+            // Dernier fragment partiel
+            if (fill > 0) {
+                trierCache(fill);
+                String fragName = nomDeFragment(0, numFragment++);
+                sauvegardeCache(fragName, entete, fill);
+            }
+        } finally {
+            this.fichierInit.close(); // on a fini de lire le fichier initial
+        }
+
+        return totalTuples;
+
+    }
+
+    /**
+     * Fusionne (au même niveau) <= M-1 fragments en un seul fragment de niveau
+     * supérieur.
+     * Hypothèse Q11 : nombre <= M-1.
+     * 
+     * @param niveau le niveau de fusion (0 pour les fragments initiaux)
+     * @param nombre le nombre de fragments à fusionner (<= M-1)
+     * @return 1 si au moins un n-uplet a été écrit, 0 sinon (fichiers vides)
+     * @throws FileNotFoundException    si le fichier n'existe pas
+     * @throws IOException              si le fichier n'existe pas ou si une erreur
+     *                                  de lecture
+     * @throws IllegalArgumentException si nombre n'est pas dans l'intervalle
      */
     private int fusion(int niveau, int nombre) throws FileNotFoundException, IOException {
-        return 0;
+
+        if (nombre > M - 1)
+            throw new IllegalArgumentException("nombre doit être <= M-1 en Q11");
+
+        if (nombre <= 0)
+            return 0;
+
+        // 1) Ouvrir tous les fragments en lecture
+        BufferedReader[] brs = new BufferedReader[nombre];
+        try {
+            for (int i = 0; i < nombre; i++) {
+                String inName = nomDeFragment(niveau, i);
+                brs[i] = new BufferedReader(new FileReader(inName));
+            }
+
+            // 2) Préparer la sortie (un seul fragment au niveau supérieur)
+            String outName = nomDeFragment(niveau + 1, 0);
+            try (FileWriter fw = new FileWriter(outName)) {
+
+                // Écrire l’entête en sortie
+                ecrireLigneCSV(fw, entete);
+
+                // 3) Charger le premier n-uplet de chaque fichier dans cache[0..nombre-1]
+                for (int i = 0; i < nombre; i++) {
+                    // sauter l’entête du fragment d’entrée
+                    brs[i].readLine();
+                    // lire la première ligne utile
+                    String ligne = brs[i].readLine();
+                    cache[i] = (ligne == null) ? null : nupletDepuis(ligne);
+                }
+
+                // 4) Boucle de fusion : à chaque itération, trouver le minimum et l’écrire
+                boolean aEcrit = false;
+                while (true) {
+                    // Trouver l’indice iMin du plus petit n-uplet parmi cache[0..nombre-1]
+                    int iMin = -1;
+                    for (int i = 0; i < nombre; i++) {
+                        if (cache[i] == null)
+                            continue;
+                        if (iMin == -1 || comparateur.compare(cache[i], cache[iMin]) < 0) {
+                            iMin = i;
+                        }
+                    }
+                    if (iMin == -1) {
+                        // Tous les fichiers sont épuisés
+                        break;
+                    }
+
+                    // Utiliser la dernière case du cache (index M-1) comme tampon
+                    // (pas de nouvelle variable pour stocker le n-uplet minimal)
+                    cache[M - 1] = cache[iMin];
+
+                    // Écrire le n-uplet minimal dans le fragment de sortie
+                    ecrireLigneCSV(fw, cache[M - 1]);
+                    aEcrit = true;
+
+                    // Avancer dans le fichier d'où vient ce minimum
+                    String ligne = brs[iMin].readLine();
+                    cache[iMin] = (ligne == null) ? null : nupletDepuis(ligne);
+                }
+
+                return aEcrit ? 1 : 0;
+            }
+        } finally {
+            // 5) Fermer toutes les entrées
+            for (int i = 0; i < nombre; i++) {
+                if (brs[i] != null) {
+                    try {
+                        brs[i].close();
+                    } catch (IOException ignore) {
+                    }
+                }
+            }
+            // Optionnel : nettoyer les cases utilisées du cache
+            for (int i = 0; i < Math.min(nombre + 1, M); i++)
+                cache[i] = null;
+        }
     }
 
     public String toString() {
@@ -167,7 +314,7 @@ public class TriExterne {
     public static void main(String[] args) throws Exception {
 
         // test du comparateur
-        testComparateur();
+        // testComparateur();
 
         // exécution du tri externe
         if (args.length < 2) {

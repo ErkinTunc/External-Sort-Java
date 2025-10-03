@@ -29,10 +29,10 @@ public class TriExterne {
     // size of the cache in number of n-uplet
     // M >= 3
     public static int M = 10;
-    public final String[][] cache;
-    public final String path;
-    public final String[] entete;
-    public final Comparateur comparateur;
+    public final String[][] cache; // cache en mémoire pour stocker temporairement les lignes
+    public final String path; // chemin du fichier CSV à trier
+    public final String[] entete; // liste des noms de colonnes du fichier CSV
+    public final Comparateur comparateur; // comparateur pour trier les lignes selon les colonnes demandées
     public final BufferedReader fichierInit; // Reads text from a character-input stream
 
     /**
@@ -81,12 +81,36 @@ public class TriExterne {
     public void trier() throws FileNotFoundException, IOException {
     }
 
-    // tri le cache entre les indices 0 et taille - 1 inclus
+    /**
+     * tri le cache entre les indices [0,(taille-1)]
+     * <p>
+     * - Arrays.sort(array,0,taille ,comparateur) permet de trier une partie d'un
+     * tableau
+     * </p>
+     * 
+     * @param taille le nombre d'éléments à trier (<= M)
+     */
     private void trierCache(int taille) {
+        Arrays.sort(cache, 0, taille, comparateur);
     }
 
-    // écrit une ligne dans un fichier CSV pour les stocker les valeurs
+    /**
+     * écrit une ligne dans un fichier CSV pour les stocker les valeurs
+     * 
+     * @param fw      le FileWriter du fichier CSV
+     * @param valeurs le nuplet (tableau de String)
+     * @throws IOException si une erreur d'écriture dans le fichier se produit
+     */
     private static void ecrireLigneCSV(FileWriter fw, String[] valeurs) throws IOException {
+        String mot = "";
+        for (int i = 0; i < valeurs.length; i++) {
+            mot += valeurs[i];
+            if (i != valeurs.length - 1) {
+                mot += ";";
+            }
+        }
+        mot += "\n";
+        fw.append(mot);
     }
 
     // écrit dans un fichier CSV le contenu du cache de l'indice 0 à taille - 1

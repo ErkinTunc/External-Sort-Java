@@ -1,5 +1,31 @@
 
 /**
+ * TriExterne.java : implémente un tri externe sur un fichier CSV.
+ * 
+ * Fonctionnalités :
+ * - Lit un fichier CSV avec une entête (noms de colonnes).
+ * - Trie les lignes selon une ou plusieurs colonnes (comme ORDER BY en SQL).
+ * - Utilise un tri externe avec un cache de taille M (nombre de lignes).
+ * - Génère des fragments triés, puis les fusionne par groupes de (M-1).
+ * - Produit un fichier trié final.
+ * - Nettoie les fragments temporaires après usage.
+ * - Permet de gérer des fichiers plus grands que la mémoire disponible.
+ * 
+ * Usage: java TriExterne <fichier.csv> <colonne1;colonne2;...> [<type1;type2;...>(optionnel)]
+ * Exemple: java TriExterne data.csv "Nom;Age"
+ *          java TriExterne data.csv "Nom;Age" "TXT;NUM"
+ * 
+ * Limite: M doit être au moins 3 pour permettre la fusion.
+ * 
+ * @author Erkin Tunc BOYA
+ * @version 1.14
+ * @since   2025-10-01
+ * 
+ * @see     Comparateur
+ * @throws  RuntimeException si une colonne demandée n’existe pas dans l’entête
+ */
+
+/**
  * Q1: BufferedReader fichierInit : permet de lire le fichier CSV initial de façon efficace.
  *     C’est efficace car il lit les données avec un buffer(un block), donc on n’a pas besoin de charger
  *     tout le fichier en mémoire et on évite de faire une lecture pour chaque caractère.
@@ -41,12 +67,23 @@ public class TriExterne {
     public final BufferedReader fichierInit; // Reads text from a character-input stream
 
     /**
+     * Constructeur rétro-compatible : types AUTO (déduction à la volée).
+     */
+    public TriExterne(String path, String[] colonnes) throws IOException {
+        this(path, colonnes, null);// null => AUTO
+    }
+
+    /**
      * Constructeur de TriExterne : ouvre le fichier CSV et prépare le tri.
      * - Lit l'entête du fichier pour récupérer les noms de colonnes.
      * - Vérifie que les colonnes demandées pour le tri existent.
      * - Crée un comparateur basé sur ces colonnes.
      * - Initialise un cache en mémoire pour stocker temporairement les lignes.
      *
+     * <p>
+     * Constructeur typé : force NUM/TXT par colonne (même longueur que colonnes).
+     * </p>
+     * 
      * @param path     le chemin du fichier CSV à trier
      * @param colonnes le nom des colonnes d'une table (comme dans une clause ORDER
      *                 BY en SQL)
@@ -54,25 +91,49 @@ public class TriExterne {
      * @throws IOException           si le fichier n'existe pas ou si une erreur de
      *                               lecture
      */
-    public TriExterne(String path, String[] colonnes) throws FileNotFoundException, IOException {
+    public TriExterne(String path, String[] colonnes, String typesCsvOuNull) throws IOException {
         this.path = path;
         this.fichierInit = new BufferedReader(new FileReader(path));
-        // liste des noms de colonnes du fichier CSV
         this.entete = fichierInit.readLine().split(";");
 
-        int[] indices = new int[colonnes.length]; // indices des colonnes pour le tri
+        // Résoudre indices
+        int[] indices = new int[colonnes.length];
         for (int i = 0; i < colonnes.length; i++) {
             indices[i] = -1;
-            for (int indice = 0; indice < entete.length; indice++)
-                if (entete[indice].equals(colonnes[i]))
-                    indices[i] = indice;
-
+            for (int j = 0; j < entete.length; j++) {
+                if (entete[j].equals(colonnes[i])) {
+                    indices[i] = j;
+                    break;
+                }
+            }
             if (indices[i] == -1)
-                throw new RuntimeException(
-                        String.format("La colonne \"%s\" n'existe pas dans l'entête du fichier CSV", colonnes[i]));
+                throw new RuntimeException("Colonne inconnue dans l'entête: " + colonnes[i]);
         }
 
-        this.comparateur = new Comparateur(indices);
+        // Types: si null/vides => AUTO, sinon parse "NUM;TXT;..."
+        Comparateur.Type[] types;
+        if (typesCsvOuNull == null || typesCsvOuNull.trim().isEmpty()) {
+            types = new Comparateur.Type[colonnes.length];
+            Arrays.fill(types, Comparateur.Type.AUTO);
+        } else {
+            String[] ts = typesCsvOuNull.split(";");
+            if (ts.length != colonnes.length)
+                throw new IllegalArgumentException("Le nombre de types doit égaler le nombre de colonnes.");
+            types = new Comparateur.Type[ts.length];
+            for (int i = 0; i < ts.length; i++) {
+                String t = ts[i].trim().toUpperCase();
+                if (t.equals("NUM"))
+                    types[i] = Comparateur.Type.NUM;
+                else if (t.equals("TXT"))
+                    types[i] = Comparateur.Type.TXT;
+                else if (t.equals("AUTO") || t.isEmpty())
+                    types[i] = Comparateur.Type.AUTO;
+                else
+                    throw new IllegalArgumentException("Type inconnu: " + ts[i] + " (attendu NUM/TXT/AUTO)");
+            }
+        }
+
+        this.comparateur = new Comparateur(indices, types);
         this.cache = new String[M][entete.length];
     }
 
@@ -373,19 +434,27 @@ public class TriExterne {
 
     public static void main(String[] args) throws Exception {
 
-        // test du comparateur
+        // === test du comparateur ===
         // testComparateur();
 
         // exécution du tri externe
         if (args.length < 2) {
             System.out.println("Le premier argument est un fichier CSV");
             System.out.println("Le deuxième argument est les colonnes pour le tri");
+            System.out.println(
+                    "Le troisième argument (optionnel) est les types (NUM;TXT;...) par colonne Sinon automatique");
             return;
         }
 
+        // mesurer le temps d'exécution
         long t1 = System.currentTimeMillis();
 
-        TriExterne algo = new TriExterne(args[0], args[1].split(";"));
+        // lancer le tri externe
+        String fichier = args[0];
+        String[] cols = args[1].split(";");
+        String typesCsv = (args.length >= 3) ? args[2] : null; // null => AUTO
+
+        TriExterne algo = new TriExterne(fichier, cols, typesCsv);
 
         algo.trier();
 

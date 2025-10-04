@@ -66,7 +66,7 @@ This sorts the **communes.csv** dataset by region, then by commune name.
 
 ---
 
-## 🏷️ Classes and Methods (Public API)
+## 🏷️ Classes and Methods 
 
 ### **TriExterne**
 

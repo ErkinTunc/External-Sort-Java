@@ -113,16 +113,46 @@ public class TriExterne {
 
             System.out.println("[Fusion] Niveau " + (niveau + 1) + " : " + produits + " fragment(s) créé(s).");
 
+            // (Optionnel) Nettoyage : supprimer les fragments du niveau courant
+            supprimerFragmentsDuNiveau(niveau, courant);
+
             // Passer au niveau suivant
             niveau++;
             courant = produits;
 
-            // (Optionnel) Nettoyage ici : supprimer les fragments du niveau précédent si
-            // besoin.
-            // for (int i = 0; i < ... ) new File(nomDeFragment(niveau-1, i)).delete();
         }
 
         System.out.println("[Terminé] Fichier trié : " + nomDeFragment(niveau, 0));
+    }
+
+    /**
+     * Supprime les fragments d'un niveau avec journalisation et quelques
+     * tentatives.
+     * 
+     * @param niveau le niveau des fragments à supprimer
+     * @param count  le nombre de fragments à supprimer
+     */
+    private void supprimerFragmentsDuNiveau(int niveau, int count) {
+        for (int i = 0; i < count; i++) {
+            File temporaryFiles = new File(nomDeFragment(niveau, i));
+            boolean deleted = false;
+            for (int attempt = 0; attempt < 3 && temporaryFiles.exists(); attempt++) {
+                deleted = temporaryFiles.delete();
+                if (deleted)
+                    break;
+                // légère pause + GC pour éviter un verrouillage transitoire sous Windows
+                System.gc();
+                try {
+                    Thread.sleep(5);
+                } catch (InterruptedException ignore) {
+                }
+            }
+            if (!deleted && temporaryFiles.exists()) {
+                System.out.println("[WARN] Non supprimé: " + temporaryFiles.getAbsolutePath()
+                        + " (exists=" + temporaryFiles.exists()
+                        + ", canWrite=" + temporaryFiles.canWrite() + ")");
+            }
+        }
     }
 
     /**

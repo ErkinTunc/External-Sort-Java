@@ -6,7 +6,7 @@ External sorting is required when the dataset is **too large to fit into main me
 
 ---
 
-## 📖 Algorithm Overview
+## Algorithm Overview
 
 The algorithm proceeds in **two main phases**:
 
@@ -18,7 +18,7 @@ The algorithm works in two main phases:
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 - `TriExterne.java` → Main class, manages external sort:
   - Generates initial fragments.
@@ -55,7 +55,7 @@ This sorts the **communes.csv** dataset by region, then by commune name.
 
 ---
 
-## 📌 Features
+## Features
 
 - Sorts CSV files on one or multiple columns (`ORDER BY`-like).
 - Works with datasets **larger than memory**.
@@ -66,7 +66,7 @@ This sorts the **communes.csv** dataset by region, then by commune name.
 
 ---
 
-## 🏷️ Classes and Methods 
+## Classes and Methods 
 
 ### **TriExterne**
 
@@ -89,7 +89,7 @@ Comparator for CSV tuples.
 
 ---
 
-## 🎓 Educational Context – What I Learned
+## Educational Context – What I Learned
 
 This project was developed in the context of the **Advanced Databases** course (Université Clermont Auvergne, 2025).  
 It helped me to better understand several **database system concepts**:
@@ -104,13 +104,13 @@ Overall, this assignment bridged **theory and practice** by turning abstract cou
 
 ---
 
-## 🚀 Possible Extensions
+## Possible Extensions
 
 - **Column typing**: allow specifying numeric (`NUM`) or textual (`TXT`) columns.
 - **Heap optimization**: replace array-based cache with a priority queue for efficient merging.
 
 ---
 
-## 📜 License
+## License
 
 Distributed under the MIT License. See `LICENSE` for more information.

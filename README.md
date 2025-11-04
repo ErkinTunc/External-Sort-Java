@@ -28,7 +28,7 @@ The algorithm works in two main phases:
 
 ---
 
-## 🛠️ Usage
+## Usage
 
 ### Compilation
 

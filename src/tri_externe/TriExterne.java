@@ -131,7 +131,10 @@ public class TriExterne {
             types = new Comparateur.Type[colonnes.length];
             Arrays.fill(types, Comparateur.Type.AUTO);
         } else {
-            String[] ts = typesCsvOuNull.split(";");
+            String[] ts = Arrays.stream(typesCsvOuNull.split(";"))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toArray(String[]::new);
             if (ts.length != colonnes.length)
                 throw new IllegalArgumentException("Le nombre de types doit égaler le nombre de colonnes.");
             types = new Comparateur.Type[ts.length];
@@ -484,6 +487,7 @@ public class TriExterne {
             System.out.println("Le deuxième argument est les colonnes pour le tri");
             System.out.println(
                     "Le troisième argument (optionnel) est les types (NUM;TXT;...) par colonne Sinon automatique");
+            System.out.println("PowerShell: utilisez des guillemets pour ';' : \"COL1;COL2\"");
             return;
         }
 
@@ -492,7 +496,12 @@ public class TriExterne {
 
         // lancer le tri externe
         String fichier = args[0];
-        String[] cols = args[1].split(";");
+
+        String[] cols = Arrays.stream(args[1].split(";"))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toArray(String[]::new);
+
         String typesCsv = (args.length >= 3) ? args[2] : null; // null => AUTO
 
         TriExterne algo = new TriExterne(fichier, cols, typesCsv);

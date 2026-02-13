@@ -135,8 +135,10 @@ public class TriExterne {
                     .map(String::trim)
                     .filter(s -> !s.isEmpty())
                     .toArray(String[]::new);
-            if (ts.length != colonnes.length)
-                throw new IllegalArgumentException("Le nombre de types doit égaler le nombre de colonnes.");
+            if (ts.length != colonnes.length) {
+                throw new IllegalArgumentException(
+                        "Le nombre de types doit égaler le nombre de colonnes. Ex: \"TXT;NUM\"");
+            }
             types = new Comparateur.Type[ts.length];
             for (int i = 0; i < ts.length; i++) {
                 String t = ts[i].trim().toUpperCase();
@@ -473,7 +475,10 @@ public class TriExterne {
      * @return le nuplet (tableau de String)
      */
     public static String[] nupletDepuis(String ligne) {
-        return ligne.split(";");
+        String[] parts = ligne.split(";");
+        for (int i = 0; i < parts.length; i++)
+            parts[i] = parts[i].trim();
+        return parts;
     }
 
     public static void main(String[] args) throws Exception {
@@ -496,11 +501,20 @@ public class TriExterne {
 
         // lancer le tri externe
         String fichier = args[0];
+        File inputFile = new File(fichier);
+
+        if (!inputFile.exists() || !inputFile.isFile()) {
+            throw new FileNotFoundException("Fichier introuvable: " + inputFile.getPath());
+        }
 
         String[] cols = Arrays.stream(args[1].split(";"))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toArray(String[]::new);
+
+        if (cols.length == 0) {
+            throw new IllegalArgumentException("Aucune colonne valide fournie. Exemple: \"REG;COM\"");
+        }
 
         String typesCsv = (args.length >= 3) ? args[2] : null; // null => AUTO
 

@@ -58,6 +58,13 @@ package tri_externe;
 import java.io.*;
 import java.util.*;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 public class TriExterne {
     // size of the cache in number of n-uplet
     // M >= 3
@@ -67,6 +74,9 @@ public class TriExterne {
     public final String[] entete; // liste des noms de colonnes du fichier CSV
     public final Comparateur comparateur; // comparateur pour trier les lignes selon les colonnes demandées
     public final BufferedReader fichierInit; // Reads text from a character-input stream
+
+    private final Path runDir; // tmp/fragments/run_YYYYMMDD_HHMMSS
+    private final Path outputDir; // output/
 
     /**
      * Constructeur rétro-compatible : types AUTO (déduction à la volée).
@@ -97,6 +107,9 @@ public class TriExterne {
         this.path = path;
         this.fichierInit = new BufferedReader(new FileReader(path));
         this.entete = fichierInit.readLine().split(";");
+
+        this.runDir = createRunDir();
+        this.outputDir = Paths.get("output");
 
         // Résoudre indices
         int[] indices = new int[colonnes.length];
@@ -186,6 +199,11 @@ public class TriExterne {
         }
 
         System.out.println("[Terminé] Fichier trié : " + nomDeFragment(niveau, 0));
+        ensureOutputDir();
+        Path finalFragment = Paths.get(nomDeFragment(niveau, 0));
+        Path finalOutput = outputDir.resolve("sorted.csv");
+        Files.copy(finalFragment, finalOutput, StandardCopyOption.REPLACE_EXISTING);
+        System.out.println("[Sortie] Fichier final : " + finalOutput.toString());
     }
 
     /**
@@ -409,6 +427,25 @@ public class TriExterne {
         }
     }
 
+    private static Path createRunDir() {
+        String stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        Path dir = Paths.get("tmp", "fragments", "run_" + stamp);
+        try {
+            Files.createDirectories(dir);
+        } catch (IOException e) {
+            throw new RuntimeException("Impossible de créer le dossier run: " + dir, e);
+        }
+        return dir;
+    }
+
+    private static void ensureOutputDir() {
+        try {
+            Files.createDirectories(Paths.get("output"));
+        } catch (IOException e) {
+            throw new RuntimeException("Impossible de créer le dossier output/", e);
+        }
+    }
+
     public String toString() {
         return Arrays.toString(this.cache);
     }
@@ -420,8 +457,8 @@ public class TriExterne {
      * @param numero le numéro du fragment
      * @return le nom du fichier fragment
      */
-    private static String nomDeFragment(int niveau, int numero) {
-        return String.format("fragment_%s_%s.csv", niveau, numero);
+    private String nomDeFragment(int niveau, int numero) {
+        return runDir.resolve(String.format("fragment_%s_%s.csv", niveau, numero)).toString();
     }
 
     /**

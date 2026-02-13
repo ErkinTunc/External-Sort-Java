@@ -9,6 +9,8 @@
  * @since   2025-10-01
  */
 
+package tri_externe;
+
 import java.util.Comparator;
 
 /**

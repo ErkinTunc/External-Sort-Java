@@ -1,116 +1,95 @@
 # External Sort (Tri Externe) – Database Systems TP2
 
-This repository contains a Java implementation of the **external sorting algorithm** (“Tri Externe”), developed as part of the **Advanced Databases (Base de données avancée)** course (TP2).
-
-External sorting is required when the dataset is **too large to fit into main memory (RAM)**. The algorithm is memory-constrained and uses disk-based fragments.
+Java implementation of the **external sorting algorithm** used when datasets are **too large to fit into RAM**, relying on disk fragments and multi-way merging.
 
 ---
 
 ## Algorithm Overview
 
-The algorithm proceeds in **two main phases**:
+The algorithm works in two phases:
 
-External sort is used when the dataset is **too large to fit into memory (RAM)**.  
-The algorithm works in two main phases:
+1. **Run generation**
+   - Read CSV blocks of size `M`.
+   - Sort each block in memory.
+   - Write sorted blocks as temporary fragments.
 
-1. **Run generation:** The input file is read in blocks of size `M` (the memory cache). Each block is sorted and written to disk as a temporary fragment.
-2. **Multi-way merge:** The sorted fragments are merged together (using up to `M-1` fragments simultaneously) until a single sorted output file remains.
+2. **Multi-way merge**
+   - Merge up to `M-1` fragments at once.
+   - Continue until a single sorted file remains.
 
 ---
 
 ## Project Structure
 
-- `TriExterne.java` → Main class, manages external sort:
-  - Generates initial fragments.
-  - Performs multi-way merge.
-  - Handles CSV reading/writing.
-- `Comparateur.java` → Comparator that sorts tuples (rows) according to one or multiple columns.
+- `src/tri_externe/`
+  - `TriExterne.java` — External sort implementation.
+  - `Comparateur.java` — Comparator for tuple ordering.
+- `data/` — Input CSV files.
+- `tmp/` — Temporary fragments generated during execution.
 
 ---
 
 ## Usage
 
 ### Compilation
-
 ```bash
-javac *.java
+javac src/tri_externe/*.java
 ```
 
 ### Execution
-
 ```bash
-java TriExterne input.csv col1;col2;...
+java -cp src tri_externe.TriExterne data/communes.csv col1;col2;...
 ```
-
-- `input.csv` → CSV file with a **header row** (column names).
-- `col1;col2;...` → list of column names to sort by (like SQL `ORDER BY`).
 
 Example:
-
 ```bash
-java TriExterne communes.csv REG;COM
+java -cp src tri_externe.TriExterne data/communes.csv REG;COM
 ```
 
-This sorts the **communes.csv** dataset by region, then by commune name.
+Sorts the dataset by region and then by commune name.
 
 ---
 
 ## Features
 
-- Sorts CSV files on one or multiple columns (`ORDER BY`-like).
-- Works with datasets **larger than memory**.
-- Uses a memory cache of size `M` (tunable).
-- Generates sorted fragments and merges them iteratively.
-- Handles **lexicographic multi-column ordering**.
-- Extendable to support **numeric vs textual column types**.
+- Multi-column CSV sorting.
+- Handles datasets larger than memory.
+- Fragment generation and multi-way merging.
+- Extendable comparator logic.
 
 ---
 
-## Classes and Methods 
+## Classes and Methods
 
-### **TriExterne**
+### TriExterne
+- `TriExterne(String path, String colonnes, int M)`
+- `trier()`
+- `creerFragmentsInitiaux()`
+- `fusion(int niveau, int nombre)`
+- `testComparateur()`
 
-Main class implementing the external sort algorithm.
-
-- **TriExterne(String path, String colonnes, int M)** → Constructor, initializes cache, comparator, and CSV reader.
-- **void trier()** → Runs the external sort: creates fragments, merges them until the file is fully sorted.
-- **int creerFragmentsInitiaux()** → Generates sorted initial fragments from the input CSV.
-- **int fusion(int niveau, int nombre)** → Merges up to `M-1` fragments into a higher-level fragment.
-- **void testComparateur()** → Tests the comparator with sample tuples.
-
----
-
-### **Comparateur**
-
-Comparator for CSV tuples.
-
-- **Comparateur(int[] indices)** → Constructor, selects which columns are used for sorting.
-- **int compare(String[] t1, String[] t2)** → Compares two tuples lexicographically on the chosen columns.
+### Comparateur
+- `Comparateur(int[] indices)`
+- `compare(String[] t1, String[] t2)`
 
 ---
 
 ## Educational Context – What I Learned
 
 This project was developed in the context of the **Advanced Databases** course (Université Clermont Auvergne, 2025).  
-It helped me to better understand several **database system concepts**:
+It helped me to better understand several database system concepts:
 
-- How a DBMS performs **sorting operations** (`ORDER BY`, `GROUP BY`, `DISTINCT`) using external sort.
-- The importance of **memory constraints** in real-world systems and how to design algorithms that scale beyond available RAM.
-- The **two-phase sort-merge algorithm**: run generation and multi-way merging.
-- How to design and implement a **comparator** for multi-column ordering, similar to SQL’s behavior.
-- The role of **temporary files and disk I/O** in database query processing.
+- How a DBMS performs sorting operations (`ORDER BY`, `GROUP BY`, `DISTINCT`) using external sort.
+- The importance of memory constraints and how to design scalable algorithms.
+- The two-phase sort-merge algorithm.
+- Multi-column comparator design similar to SQL ordering.
+- The role of temporary files and disk I/O in query processing.
 
-Overall, this assignment bridged **theory and practice** by turning abstract course concepts into a concrete Java program that manipulates real data.
+Overall, this assignment bridged theory and practice by turning course concepts into a working Java program handling real data.
 
 ---
 
 ## Possible Extensions
 
-- **Column typing**: allow specifying numeric (`NUM`) or textual (`TXT`) columns.
-- **Heap optimization**: replace array-based cache with a priority queue for efficient merging.
-
----
-
-## License
-
-Distributed under the MIT License. See `LICENSE` for more information.
+- Numeric vs textual column typing.
+- Heap-based merge optimization.

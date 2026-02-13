@@ -53,6 +53,8 @@
  * 
  **/
 
+package tri_externe;
+
 import java.io.*;
 import java.util.*;
 

@@ -1,116 +1,135 @@
-# External Sort (Tri Externe)
+# External Sort (Tri Externe) -- Large CSV Processing in Java
 
-Java implementation of the **external sorting algorithm** used when
-datasets are **too large to fit into RAM**, relying on disk fragments
+Java implementation of an external sorting algorithm designed to process
+datasets larger than available memory, using disk-based run generation
 and multi-way merging.
+
+This project reproduces how database systems implement operations such
+as:
+
+- ORDER BY
+- GROUP BY
+- DISTINCT
+
+when data cannot fit entirely into RAM.
+
+---
+
+## Problem Addressed
+
+Standard in-memory sorting fails when datasets exceed memory limits.\
+This implementation performs sorting using:
+
+1.  Memory-sized sorted runs
+2.  Disk storage of intermediate fragments
+3.  Multi-pass merging strategy
+
+allowing scalable processing of large CSV files.
 
 ---
 
 ## Algorithm Overview
 
-The algorithm works in two phases:
+### Phase 1 --- Run Generation
 
-1.  **Run generation**
-    - Read CSV blocks of size `M`.
-    - Sort each block in memory.
-    - Write sorted blocks as temporary fragments.
-2.  **Multi-way merge**
-    - Merge up to `M-1` fragments at once.
-    - Continue until a single sorted file remains.
+- CSV file is read block-by-block (size `M`).
+- Each block is sorted in memory.
+- Sorted blocks are stored as temporary fragments on disk.
+
+### Phase 2 --- Multi-way Merge
+
+- Up to `M-1` fragments are merged simultaneously.
+- Merging continues level by level.
+- Execution ends when a single sorted fragment remains.
+
+---
+
+## Technical Characteristics
+
+- External sorting using disk fragments
+- Multi-column CSV ordering
+- Automatic numeric/text comparison
+- Memory-constrained processing
+- Multi-pass merge strategy
+- Temporary fragment cleanup
+- UTF-8 file handling
+- Command-line execution support
 
 ---
 
 ## Project Structure
 
-- `src/tri_externe/`
-  - `TriExterne.java` --- External sort implementation.
-  - `Comparateur.java` --- Comparator for tuple ordering.
-- `data/` --- Input CSV files.
-- `tmp/` --- Temporary fragments generated during execution.
-- `output/` --- Final sorted output file.
+    src/tri_externe/
+     ├── TriExterne.java   # External sorting engine
+     └── Comparateur.java  # Multi-column comparator
+
+    data/                  # Input datasets
+    tmp/                   # Generated fragments
+    output/                # Final sorted file
 
 ---
 
-## Usage
-
-### Compilation
+## Compilation
 
 ```bash
 javac src/tri_externe/*.java
 ```
 
-### Execution
+---
 
-```bash
-java -cp src tri_externe.TriExterne data/communes.csv "col1;col2;..."
-```
+## Execution
 
-Optional column types can also be specified (one type per column):
-
-```bash
-java -cp src tri_externe.TriExterne data/communes.csv "col1;col2" "TXT;NUM"
-```
-
-PowerShell note: arguments containing `;` must be quoted.
-
-Example:
+Sort by columns:
 
 ```bash
 java -cp src tri_externe.TriExterne data/communes.csv "REG;COM"
 ```
 
+Specify column types:
+
+```bash
+java -cp src tri_externe.TriExterne data/communes.csv "REG;COM" "TXT;TXT"
+```
+
+PowerShell users must quote arguments containing `;`.
+
+---
+
+## Output
+
 The final sorted file is written to:
 
     output/sorted.csv
 
----
-
-## Features
-
-- Multi-column CSV sorting.
-- Handles datasets larger than memory.
-- Fragment generation and multi-way merging.
-- Extendable comparator logic for custom ordering rules.
+Temporary fragments are automatically cleaned.
 
 ---
 
-## Classes and Methods
+## Skills Demonstrated
 
-### TriExterne
+This project demonstrates:
 
-- `TriExterne(String path, String colonnes, int M)`
-- `trier()`
-- `creerFragmentsInitiaux()`
-- `fusion(int niveau, int nombre)`
-- `testComparateur()`
-
-### Comparateur
-
-- `Comparateur(int[] indices)`
-- `compare(String[] t1, String[] t2)`
+- Large-scale data processing
+- External memory algorithms
+- Efficient disk I/O handling
+- Comparator design similar to SQL ordering
+- Multi-way merge implementation
+- Resource-aware algorithm design
 
 ---
 
-## Educational Context -- What I Learned
+## Academic Context
 
-This project was developed in the context of the **Advanced Databases**
-course (Université Clermont Auvergne, 2025).\
-It helped me to better understand several database system concepts:
-
-- How a DBMS performs sorting operations (`ORDER BY`, `GROUP BY`,
-  `DISTINCT`) using external sort.
-- The importance of memory constraints and how to design scalable
-  algorithms.
-- The two-phase sort-merge algorithm.
-- Multi-column comparator design similar to SQL ordering.
-- The role of temporary files and disk I/O in query processing.
-
-Overall, this assignment bridged theory and practice by turning course
-concepts into a working Java program handling real data.
+Developed during the Advanced Databases course (Université Clermont
+Auvergne, 2025), bridging theoretical database algorithms with practical
+implementation.
 
 ---
 
 ## Possible Extensions
 
-- Numeric vs textual column typing improvements.
-- Heap-based merge optimization for faster multi-way merging.
+- Heap-based k-way merge optimization
+- Parallel merging
+- Dynamic memory sizing
+- Streaming input support
+- Index-based sorting

@@ -257,15 +257,17 @@ public class TriExterne {
      * @throws IOException si une erreur d'écriture dans le fichier se produit
      */
     private static void ecrireLigneCSV(FileWriter fw, String[] valeurs) throws IOException {
-        String mot = ""; // TODO: StringBuilder serait plus efficace
+        StringBuilder lineBuilder = new StringBuilder();
+
         for (int i = 0; i < valeurs.length; i++) {
-            mot += valeurs[i];
-            if (i != valeurs.length - 1) {
-                mot += ";";
+            if (i > 0) {
+                lineBuilder.append(';');
             }
+            lineBuilder.append(valeurs[i]);
         }
-        mot += "\n";
-        fw.append(mot);
+        lineBuilder.append('\n');
+
+        fw.append(lineBuilder);
     }
 
     /**

@@ -38,15 +38,27 @@ javac src/tri_externe/*.java
 
 ### Execution
 ```bash
-java -cp src tri_externe.TriExterne data/communes.csv col1;col2;...
+java -cp src tri_externe.TriExterne data/communes.csv "col1;col2;..."
 ```
+
+Optional column types:
+```bash
+java -cp src tri_externe.TriExterne data/communes.csv "col1;col2" "TXT;NUM"
+```
+
+PowerShell note:
+Arguments containing `;` must be quoted.
 
 Example:
 ```bash
-java -cp src tri_externe.TriExterne data/communes.csv REG;COM
+java -cp src tri_externe.TriExterne data/communes.csv "REG;COM"
 ```
 
-Sorts the dataset by region and then by commune name.
+The final sorted file is written to:
+
+```
+output/sorted.csv
+```
 
 ---
 

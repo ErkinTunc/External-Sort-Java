@@ -27,3 +27,4 @@ replay_pid*
 tmp/
 output/
 *.class
+.vscode

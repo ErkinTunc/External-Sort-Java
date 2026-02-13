@@ -18,7 +18,7 @@
  * Limite: M doit être au moins 3 pour permettre la fusion.
  * 
  * @author Erkin Tunc BOYA
- * @version 1.14
+ * @version 1.15
  * @since   2025-10-01
  * 
  * @see     Comparateur
@@ -65,6 +65,8 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+import java.nio.charset.StandardCharsets;
+
 public class TriExterne {
     // size of the cache in number of n-uplet
     // M >= 3
@@ -73,7 +75,6 @@ public class TriExterne {
     public final String path; // chemin du fichier CSV à trier
     public final String[] entete; // liste des noms de colonnes du fichier CSV
     public final Comparateur comparateur; // comparateur pour trier les lignes selon les colonnes demandées
-    public final BufferedReader fichierInit; // Reads text from a character-input stream
 
     private final Path runDir; // tmp/fragments/run_YYYYMMDD_HHMMSS
     private final Path outputDir; // output/
@@ -105,8 +106,15 @@ public class TriExterne {
      */
     public TriExterne(String path, String[] colonnes, String typesCsvOuNull) throws IOException {
         this.path = path;
-        this.fichierInit = new BufferedReader(new FileReader(path));
-        this.entete = fichierInit.readLine().split(";");
+
+        try (BufferedReader headerReader = new BufferedReader(
+                new InputStreamReader(new FileInputStream(path), StandardCharsets.UTF_8))) {
+            String headerLine = headerReader.readLine();
+            if (headerLine == null) {
+                throw new IOException("Fichier CSV vide: " + path);
+            }
+            this.entete = headerLine.split(";", -1);
+        }
 
         this.runDir = createRunDir();
         this.outputDir = Paths.get("output");
@@ -268,7 +276,8 @@ public class TriExterne {
             if (i > 0) {
                 lineBuilder.append(';');
             }
-            lineBuilder.append(valeurs[i]);
+            String value = (valeurs[i] == null) ? "" : valeurs[i];
+            lineBuilder.append(value);
         }
         lineBuilder.append('\n');
 
@@ -315,13 +324,17 @@ public class TriExterne {
      * @throws IOException si une erreur de lecture ou d'écriture se produit
      */
     private int creerFragmentsInitiaux() throws IOException {
-        String ligne;
         int totalTuples = 0; // demandé par l'énoncé Q9
         int fill = 0; // nb d'éléments actuellement dans le cache
         int numFragment = 0; // fragment_0_{numFragment}.csv
 
-        try {
-            while ((ligne = this.fichierInit.readLine()) != null) {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(new FileInputStream(this.path), StandardCharsets.UTF_8))) {
+
+            reader.readLine(); // sauter l'entête
+
+            String ligne;
+            while ((ligne = reader.readLine()) != null) {
                 cache[fill] = nupletDepuis(ligne);
                 fill++;
                 totalTuples++;
@@ -330,22 +343,18 @@ public class TriExterne {
                     trierCache(fill);
                     String fragName = nomDeFragment(0, numFragment++);
                     sauvegardeCache(fragName, entete, fill);
-                    fill = 0; // on "vide" le cache logiquement
+                    fill = 0;
                 }
             }
 
-            // Dernier fragment partiel
             if (fill > 0) {
                 trierCache(fill);
                 String fragName = nomDeFragment(0, numFragment++);
                 sauvegardeCache(fragName, entete, fill);
             }
-        } finally {
-            this.fichierInit.close(); // on a fini de lire le fichier initial
         }
 
         return totalTuples;
-
     }
 
     /**
@@ -374,7 +383,7 @@ public class TriExterne {
         try {
             for (int j = 0; j < nombre; j++) {
                 String inName = nomDeFragment(niveau, debut + j);
-                brs[j] = new BufferedReader(new FileReader(inName));
+                brs[j] = new BufferedReader(new InputStreamReader(new FileInputStream(inName), StandardCharsets.UTF_8));
             }
 
             // 2) Préparer la sortie
@@ -475,7 +484,7 @@ public class TriExterne {
      * @return le nuplet (tableau de String)
      */
     public static String[] nupletDepuis(String ligne) {
-        String[] parts = ligne.split(";");
+        String[] parts = ligne.split(";", -1);
         for (int i = 0; i < parts.length; i++)
             parts[i] = parts[i].trim();
         return parts;
@@ -514,6 +523,17 @@ public class TriExterne {
 
         if (cols.length == 0) {
             throw new IllegalArgumentException("Aucune colonne valide fournie. Exemple: \"REG;COM\"");
+        }
+
+        // Heuristic: if user forgot columns and passed types as 2nd arg (e.g.
+        // "TXT;NUM")
+        boolean looksLikeTypesOnly = Arrays.stream(cols)
+                .allMatch(s -> s.equalsIgnoreCase("TXT") || s.equalsIgnoreCase("NUM") || s.equalsIgnoreCase("AUTO"));
+
+        if (looksLikeTypesOnly) {
+            throw new IllegalArgumentException(
+                    "2e argument doit être la liste des colonnes, pas les types.\n" +
+                            "Ex: java ... data.csv \"REG;COM\" \"TXT;TXT\"");
         }
 
         String typesCsv = (args.length >= 3) ? args[2] : null; // null => AUTO
